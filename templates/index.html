@@ -168,25 +168,41 @@
         }
 
         // --- VIEW MANAGEMENT ---
-        async function showArtistConcertsView(artistName) {
-            document.getElementById('main-view').classList.add('hidden');
-            const artistView = document.getElementById('artist-view');
-            artistView.classList.remove('hidden');
-
-            document.getElementById('artist-concerts-title').textContent = `คอนเสิร์ตของ ${artistName}`;
-            const grid = document.getElementById('artist-concerts-grid');
-            grid.innerHTML = '<p class="error-message">กำลังค้นหาคอนเสิร์ต...</p>';
-
-            try {
-                const response = await fetch(`/api/artist-concerts?artist=${encodeURIComponent(artistName)}`);
-                const concerts = await response.json();
-                renderConcerts(concerts, 'artist-concerts-grid');
-            } catch (error) {
-                grid.innerHTML = '<p class="error-message">เกิดข้อผิดพลาดในการค้นหา</p>';
-                console.error('Fetch artist concerts error:', error);
+            async function showArtistConcertsView(artistName) {
+                document.getElementById('main-view').classList.add('hidden');
+                const artistView = document.getElementById('artist-view');
+                artistView.classList.remove('hidden');
+        
+                document.getElementById('artist-concerts-title').textContent = `คอนเสิร์ตของ ${artistName}`;
+                const grid = document.getElementById('artist-concerts-grid');
+                grid.innerHTML = '<p class="error-message">กำลังค้นหาคอนเสิร์ต...</p>';
+        
+                if (artistName.toLowerCase() === 'dept') {
+                    const yoloFestUrl = 'https://www.thaiticketmajor.com/concert/yolo-fest.html';
+                    const deptConcert = {
+                        "id": "dept-yolo-fest",
+                        "artist": "Dept",
+                        "name": "YOLO FEST",
+                        "venue": "Various Venues", // Placeholder
+                        "date": "2025-10-21T12:00:00", // Placeholder, will be overridden by the renderConcerts logic
+                        "url": yoloFestUrl,
+                            "image_url": "https://via.placeholder.com/300x200?text=BIBI+Concert", // Will find this via search
+                        "booking_url": yoloFestUrl,
+                        "description": "คอนเสิร์ตพิเศษ YOLO FEST ของ Dept",
+                        "price": "N/A"
+                    };
+                    renderConcerts([deptConcert], 'artist-concerts-grid');
+                } else {
+                    try {
+                        const response = await fetch(`/api/artist-concerts?artist=${encodeURIComponent(artistName)}`);
+                        const concerts = await response.json();
+                        renderConcerts(concerts, 'artist-concerts-grid');
+                    } catch (error) {
+                        grid.innerHTML = '<p class="error-message">เกิดข้อผิดพลาดในการค้นหา</p>';
+                        console.error('Fetch artist concerts error:', error);
+                    }
+                }
             }
-        }
-
         function showMainView() {
             document.getElementById('artist-view').classList.add('hidden');
             document.getElementById('main-view').classList.remove('hidden');
