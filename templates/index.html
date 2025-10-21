@@ -114,7 +114,8 @@
 
                                                                                                         ${concert.booking_url ? `<a href="${concert.booking_url}" target="_blank" class="ticket-button">ซื้อบัตร</a>` : ''}
 
-                                                                                                        <a href="${concert.url}" class="ticket-button">ดูรายละเอียด</a>
+                                                                                                        <button class="calendar-button" data-concert='${JSON.stringify(concert)}'>📅 เพิ่มลงปฏิทิน</button>
+                            <a href="${concert.url}" class="ticket-button">ดูรายละเอียด</a>
 
                                                                                                     </div>
 
@@ -153,6 +154,12 @@
                 buttonsHTML += '<a href="/login" class="auth-button spotify-button">เข้าสู่ระบบด้วย Spotify</a>';
             }
 
+            // Google Button
+            if (status.google_logged_in) {
+                buttonsHTML += '<button class="auth-button google-button linked" disabled>✓ เชื่อมต่อกับ Google แล้ว</button>';
+            } else {
+                buttonsHTML += '<a href="/google-login" class="auth-button google-button">เชื่อมต่อกับ Google</a>';
+            }
             authSection.innerHTML = buttonsHTML;
         }
 
@@ -210,12 +217,41 @@
         document.body.addEventListener('click', async function(event) {
             const target = event.target;
             const artistCard = target.closest('.artist-card-link');
-            const calendarButton = target.closest('.calendar-button');
 
             // Handle clicking on an artist card
             if (artistCard) {
                 const artistName = artistCard.dataset.artistName;
-                showArtistConcertsView(artistName);
+                if (artistName.toLowerCase() === 'dept') {
+                    window.open('https://www.thaiticketmajor.com/concert/yolo-fest.html', '_blank');
+                } else {
+                    showArtistConcertsView(artistName);
+                }
+            }
+
+            // Handle clicking "Add to Calendar" button
+            const calendarButton = target.closest('.calendar-button');
+            if (calendarButton) {
+                try {
+                    const concertData = JSON.parse(calendarButton.dataset.concert);
+                    const response = await fetch('/api/add-to-calendar', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(concertData)
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        showNotification('เพิ่ม Event ลงใน Google Calendar สำเร็จ!');
+                    } else {
+                        // If needs login, redirect
+                        if(response.status === 401){
+                            showNotification('กรุณาเชื่อมต่อกับ Google Calendar ก่อน', false);
+                        } else {
+                            showNotification(`Error: ${result.error}`, false);
+                        }
+                    }
+                } catch(e) {
+                     showNotification('เกิดข้อผิดพลาด', false);
+                }
             }
         });
 
@@ -229,7 +265,7 @@
                 const artistName = searchBox.value.trim();
                 if (artistName) {
                     // Redirect to ThaiTicketMajor search page for the artist
-                    window.open(`https://www.thaiticketmajor.com/concert/?keyword=${encodeURIComponent(artistName)}`);
+                    window.open(`https://www.thaiticketmajor.com/concert/?keyword=${encodeURIComponent(artistName)}`, '_blank');
                     searchBox.value = ''; // Clear search box after search
                 }
             }
