@@ -240,4 +240,9 @@ header p {
     color: var(--subtle-text);
     padding: 20px;
 }
-
+/* ในไฟล์ style.css หรือส่วนที่เกี่ยวข้อง */
+.artist-concerts-grid img {
+    width: 200px; /* กำหนดความกว้างใหม่ เช่น 200px */
+    height: 150px; /* กำหนดความสูงใหม่ (ถ้าต้องการล็อกอัตราส่วน ให้ใช้แค่ width) */
+    object-fit: cover; /* เพื่อให้รูปภาพไม่บิดเบือน */
+}
