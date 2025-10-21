@@ -94,7 +94,6 @@
                         <p class="card-details">${concert.venue}</p>
                         <p class="card-date">วันที่: ${formatDate(concert.date)}</p>
                         <div class="card-actions">
-                            <button class="calendar-button" data-concert='${JSON.stringify(concert)}'>📅 เพิ่มลงปฏิทิน</button>
                             <a href="${concert.url}" target="_blank" class="ticket-button">ดูรายละเอียด</a>
                         </div>
                     </div>`;
@@ -128,12 +127,6 @@
                 buttonsHTML += '<a href="/login" class="auth-button spotify-button">เข้าสู่ระบบด้วย Spotify</a>';
             }
 
-            // Google Button
-            if (status.google_logged_in) {
-                buttonsHTML += '<button class="auth-button google-button linked" disabled>✓ เชื่อมต่อกับ Google แล้ว</button>';
-            } else {
-                buttonsHTML += '<a href="/google-login" class="auth-button google-button">เชื่อมต่อกับ Google</a>';
-            }
             authSection.innerHTML = buttonsHTML;
         }
 
@@ -169,17 +162,18 @@
                 const authStatus = await fetch('/api/auth-status').then(res => res.json());
                 renderAuthButtons(authStatus);
 
+                // Fetch the main list of concerts first
+                const mainConcertList = document.getElementById('concert-list');
+                mainConcertList.innerHTML = '<p class="loading-message">กำลังโหลดคอนเสิร์ตล่าสุด...</p>'; // Clear previous content and show loading
+                const concerts = await fetch('/api/concerts').then(res => res.json());
+                renderConcerts(concerts, 'concert-list');
+
                 // If logged in to spotify, fetch top artists
                 if (authStatus.spotify_logged_in) {
                     const artists = await fetch('/api/spotify/top-artists').then(res => res.json());
                     renderTopArtists(artists);
                 }
 
-                // Fetch the main list of concerts
-                const mainConcertList = document.getElementById('concert-list');
-                mainConcertList.innerHTML = '<p class="error-message">กำลังโหลดคอนเสิร์ตล่าสุด...</p>';
-                const concerts = await fetch('/api/concerts').then(res => res.json());
-                renderConcerts(concerts, 'concert-list');
             } catch (e) {
                 console.error("Initial load failed:", e);
                 document.getElementById('concert-list').innerHTML = '<p class="error-message">ไม่สามารถโหลดข้อมูลได้</p>';
@@ -197,31 +191,6 @@
                 const artistName = artistCard.dataset.artistName;
                 showArtistConcertsView(artistName);
             }
-
-            // Handle clicking "Add to Calendar" button
-            if (calendarButton) {
-                try {
-                    const concertData = JSON.parse(calendarButton.dataset.concert);
-                    const response = await fetch('/api/add-to-calendar', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify(concertData)
-                    });
-                    const result = await response.json();
-                    if (response.ok) {
-                        showNotification('เพิ่ม Event ลงใน Google Calendar สำเร็จ!');
-                    } else {
-                        // If needs login, redirect
-                        if(response.status === 401){
-                            showNotification('กรุณาเชื่อมต่อกับ Google Calendar ก่อน', false);
-                        } else {
-                            showNotification(`Error: ${result.error}`, false);
-                        }
-                    }
-                } catch(e) {
-                     showNotification('เกิดข้อผิดพลาด', false);
-                }
-            }
         });
 
         // Back button
@@ -233,7 +202,8 @@
             if (event.key === 'Enter') {
                 const artistName = searchBox.value.trim();
                 if (artistName) {
-                    showArtistConcertsView(artistName);
+                    // Redirect to ThaiTicketMajor search page for the artist
+                    window.open(`https://www.thaiticketmajor.com/concert/?keyword=${encodeURIComponent(artistName)}`, '_blank');
                     searchBox.value = ''; // Clear search box after search
                 }
             }
