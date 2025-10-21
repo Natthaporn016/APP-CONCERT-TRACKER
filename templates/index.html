@@ -89,7 +89,11 @@
                         } else { // Only iterate and render cards if there are concerts
 
                                                                                         concerts.forEach(concert => {
-
+                                                                                            if (concert.artist && concert.artist.toLowerCase() === 'dept') {
+                                                                                                const yoloFestUrl = 'https://www.thaiticketmajor.com/concert/yolo-fest.html';
+                                                                                                concert.url = yoloFestUrl;
+                                                                                                concert.booking_url = yoloFestUrl;
+                                                                                            }
                                                                                             const card = document.createElement('div');
 
                                                                                             card.className = 'concert-card';
@@ -221,11 +225,7 @@
             // Handle clicking on an artist card
             if (artistCard) {
                 const artistName = artistCard.dataset.artistName;
-                if (artistName.toLowerCase() === 'dept') {
-                    window.open('https://www.thaiticketmajor.com/concert/yolo-fest.html', '_blank');
-                } else {
-                    showArtistConcertsView(artistName);
-                }
+                showArtistConcertsView(artistName);
             }
 
             // Handle clicking "Add to Calendar" button
@@ -246,7 +246,7 @@
                         if(response.status === 401){
                             showNotification('กรุณาเชื่อมต่อกับ Google Calendar ก่อน', false);
                         } else {
-                            showNotification(`Error: ${result.error}`, false);
+                            showNotification(`Error: ${result && result.error ? result.error : 'Unknown error'}`, false);
                         }
                     }
                 } catch(e) {
