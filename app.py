@@ -15,6 +15,7 @@ from googleapiclient.discovery import build
 load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "a_very_strong_secret_key_123")
+app.permanent_session_lifetime = datetime.timedelta(days=31)
 
 # --- Helper Functions (Scraping) ---
 def scrape_thaiticketmajor(search_query=""):
@@ -56,8 +57,11 @@ def scrape_thaiticketmajor(search_query=""):
 # --- Google & Spotify Setup ---
 def create_spotify_oauth():
     return spotipy.SpotifyOAuth(
-        client_id=os.getenv("SPOTIPY_CLIENT_ID", "").strip(), client_secret=os.getenv("SPOTIPY_CLIENT_SECRET", "").strip(),
-        redirect_uri=os.getenv("SPOTIPY_REDIRECT_URI", "").strip(), scope="user-top-read"
+        client_id=os.getenv("SPOTIPY_CLIENT_ID", "").strip(),
+        client_secret=os.getenv("SPOTIPY_CLIENT_SECRET", "").strip(),
+        redirect_uri=os.getenv("SPOTIPY_REDIRECT_URI", "").strip(),
+        scope="user-top-read",
+        show_dialog=True
     )
 
 SCOPES = ['https://www.googleapis.com/auth/calendar.events']
@@ -78,14 +82,27 @@ def create_google_flow():
 def home(): return render_template('index.html')
 
 @app.route('/login')
-def login(): return redirect(create_spotify_oauth().get_authorize_url())
+def login():
+    # Clear existing Spotify token info to force a fresh login
+    if "spotify_token_info" in session:
+        session.pop("spotify_token_info", None)
+    return redirect(create_spotify_oauth().get_authorize_url())
 
 @app.route('/logout')
 def logout(): session.clear(); return redirect('/')
 
 @app.route('/callback')
-def callback(): 
+def callback():
+    if 'error' in request.args:
+        # User cancelled or an error occurred during authorization
+        if "spotify_token_info" in session:
+            session.pop("spotify_token_info", None)
+        # Redirect to homepage
+        return redirect('/')
+
+    # Proceed with normal token exchange if no error
     session["spotify_token_info"] = create_spotify_oauth().get_access_token(request.args.get('code'))
+    session.permanent = True
     return redirect('/')
 
 @app.route('/google-login')
