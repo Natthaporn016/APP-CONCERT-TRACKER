@@ -11,7 +11,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- Main View Container -->
         <div id="main-view">
             <header>
                 <div class="header-content">
@@ -20,12 +19,9 @@
                         <p>By Thaiticketmajor.com</p>
                     </div>
                     <div id="auth-section" class="auth-container">
-                        <!-- Auth buttons are rendered here -->
-                    </div>
+                        </div>
                 </div>
-                 <!-- Search Box -->
-                <div class="search-container">
-                    <!-- +++ ไอคอนที่เพิ่มเข้ามา +++ -->
+                  <div class="search-container">
                     <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                     <input type="text" id="search-box" placeholder="พิมพ์ชื่อศิลปินแล้วกด Enter เพื่อค้นหา...">
                 </div>
@@ -37,11 +33,9 @@
             </section>
 
             <main id="concert-list" class="concert-grid">
-                <!-- Main concert list loads here -->
-            </main>
+                </main>
         </div>
 
-        <!-- Artist Specific Concerts View (Initially Hidden) -->
         <div id="artist-view" class="hidden">
             <div class="view-header">
                 <button id="back-to-main-btn">&larr; กลับหน้าหลัก</button>
@@ -51,7 +45,6 @@
         </div>
     </div>
 
-    <!-- Notification Modal -->
     <div id="notification-modal" class="modal-backdrop hidden">
         <div class="modal-content"><p id="notification-message"></p></div>
     </div>
@@ -80,56 +73,60 @@
             const concertContainer = document.getElementById(containerId);
             concertContainer.innerHTML = '';
 
-                        if (!concerts || concerts.length === 0) {
+            if (!concerts || concerts.length === 0) {
+                concertContainer.innerHTML = `<p class="error-message">ไม่พบคอนเสิร์ตจาก ThaiTicketMajor หรือข้อมูลสำรอง</p>`;
+                // Do NOT return here. Let the function continue, but the loop won't run.
+            } else { // Only iterate and render cards if there are concerts
+                concerts.forEach(concert => {
+                    // --- LOGIC: กำหนด URL เฉพาะสำหรับศิลปิน (Dept & BIBI) ---
+                    if (concert.artist && concert.artist.toLowerCase() === 'dept') {
+                        const yoloFestUrl = 'https://www.thaiticketmajor.com/concert/yolo-fest.html';
+                        concert.url = yoloFestUrl;
+                        concert.booking_url = yoloFestUrl;
+                    } 
+                    
+                    // +++ เพิ่มเงื่อนไขสำหรับ BIBI ที่นี่ +++
+                    else if (concert.artist && concert.artist.toLowerCase() === 'bibi') {
+                        const bibiConcertUrl = 'https://www.thaiticketmajor.com/concert/2025-bibi-1st-world-toureve-in-bangkok.html';
+                        concert.url = bibiConcertUrl;
+                        concert.booking_url = bibiConcertUrl;
+                    }
+                    // --- จบ LOGIC: กำหนด URL เฉพาะ ---
+                    
+                    const card = document.createElement('div');
 
-                            concertContainer.innerHTML = `<p class="error-message">ไม่พบคอนเสิร์ตจาก ThaiTicketMajor หรือข้อมูลสำรอง</p>`;
+                    card.className = 'concert-card';
 
-                            // Do NOT return here. Let the function continue, but the loop won't run.
+                    // Use single quotes for data-concert to handle potential double quotes in concert name
 
-                        } else { // Only iterate and render cards if there are concerts
+                    card.innerHTML = `
 
-                                                                                        concerts.forEach(concert => {
-                                                                                            if (concert.artist && concert.artist.toLowerCase() === 'dept') {
-                                                                                                const yoloFestUrl = 'https://www.thaiticketmajor.com/concert/yolo-fest.html';
-                                                                                                concert.url = yoloFestUrl;
-                                                                                                concert.booking_url = yoloFestUrl;
-                                                                                            }
-                                                                                            const card = document.createElement('div');
+                        <div class="card-content">
 
-                                                                                            card.className = 'concert-card';
+                            ${concert.image_url ? `<img src="${concert.image_url}" alt="${concert.name}" class="concert-image">` : ''}
 
-                                                                                            // Use single quotes for data-concert to handle potential double quotes in concert name
+                            <h2 class="card-title">${concert.name}</h2>
 
-                                                                                            card.innerHTML = `
+                            <p class="card-artist">โดย ${concert.artist}</p>
 
-                                                                                                <div class="card-content">
+                            <p class="card-details">${concert.venue}</p>
 
-                                                                                                    ${concert.image_url ? `<img src="${concert.image_url}" alt="${concert.name}" class="concert-image">` : ''}
+                            <p class="card-date">วันที่: ${concert.date}</p>
 
-                                                                                                    <h2 class="card-title">${concert.name}</h2>
+                            <div class="card-actions">
 
-                                                                                                    <p class="card-artist">โดย ${concert.artist}</p>
+                                ${concert.booking_url ? `<a href="${concert.booking_url}" target="_blank" class="ticket-button">ซื้อบัตร</a>` : ''}
 
-                                                                                                    <p class="card-details">${concert.venue}</p>
+                                <button class="calendar-button" data-concert='${JSON.stringify(concert)}'>📅 เพิ่มลงปฏิทิน</button>
+                                <a href="${concert.url}" target="_blank" class="ticket-button">ดูรายละเอียด</a> </div>
 
-                                                                                                    <p class="card-date">วันที่: ${concert.date}</p>
+                        </div>`;
 
-                                                                                                    <div class="card-actions">
+                    concertContainer.appendChild(card);
 
-                                                                                                        ${concert.booking_url ? `<a href="${concert.booking_url}" target="_blank" class="ticket-button">ซื้อบัตร</a>` : ''}
+                });
 
-                                                                                                        <button class="calendar-button" data-concert='${JSON.stringify(concert)}'>📅 เพิ่มลงปฏิทิน</button>
-                            <a href="${concert.url}" class="ticket-button">ดูรายละเอียด</a>
-
-                                                                                                    </div>
-
-                                                                                                </div>`;
-
-                                                                                            concertContainer.appendChild(card);
-
-                                                                                        });
-
-                        }
+            }
         }
 
         function renderTopArtists(artists) {
@@ -177,6 +174,7 @@
                 const grid = document.getElementById('artist-concerts-grid');
                 grid.innerHTML = '<p class="error-message">กำลังค้นหาคอนเสิร์ต...</p>';
         
+                // --- LOGIC: กำหนดข้อมูลเฉพาะสำหรับ Dept และ BIBI ในหน้า Artist View ---
                 if (artistName.toLowerCase() === 'dept') {
                     const yoloFestUrl = 'https://www.thaiticketmajor.com/concert/yolo-fest.html';
                     const deptConcert = {
@@ -186,13 +184,32 @@
                         "venue": "Various Venues", // Placeholder
                         "date": "2025-10-21T12:00:00", // Placeholder, will be overridden by the renderConcerts logic
                         "url": yoloFestUrl,
-                            "image_url": "https://via.placeholder.com/300x200?text=BIBI+Concert", // Will find this via search
+                        "image_url": "https://via.placeholder.com/300x200?text=YOLO+FEST", // Changed placeholder text
                         "booking_url": yoloFestUrl,
                         "description": "คอนเสิร์ตพิเศษ YOLO FEST ของ Dept",
                         "price": "N/A"
                     };
                     renderConcerts([deptConcert], 'artist-concerts-grid');
-                } else {
+                } 
+                // +++ เพิ่มเงื่อนไขสำหรับ BIBI ที่นี่ +++
+                else if (artistName.toLowerCase() === 'bibi') {
+                    const bibiConcertUrl = 'https://www.thaiticketmajor.com/concert/2025-bibi-1st-world-toureve-in-bangkok.html';
+                    const bibiConcert = {
+                        "id": "bibi-world-tour",
+                        "artist": "BIBI",
+                        "name": "2025 BIBI 1st WORLD TOUR [EVE] IN BANGKOK",
+                        "venue": "ยูโอบี ไลฟ์, เอ็มสเฟียร์",
+                        "date": "9 ส.ค. 2568", 
+                        "url": bibiConcertUrl,
+                        "image_url": "http://googleusercontent.com/image_collection/image_retrieval/2883509636573418193_0", // ใช้ URL รูปภาพที่หามาได้
+                        "booking_url": bibiConcertUrl,
+                        "description": "N/A",
+                        "price": "N/A"
+                    };
+                    renderConcerts([bibiConcert], 'artist-concerts-grid');
+                }
+                // --- จบ LOGIC: กำหนดข้อมูลเฉพาะ ---
+                else {
                     try {
                         const response = await fetch(`/api/artist-concerts?artist=${encodeURIComponent(artistName)}`);
                         const concerts = await response.json();
@@ -266,7 +283,7 @@
                         }
                     }
                 } catch(e) {
-                     showNotification('เกิดข้อผิดพลาด', false);
+                    showNotification('เกิดข้อผิดพลาด', false);
                 }
             }
         });
@@ -292,4 +309,3 @@
     </script>
 </body>
 </html>
-

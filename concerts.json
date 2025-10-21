@@ -1,4 +1,15 @@
 [
+    
+   
+
+    
+    
+    
+    
+    
+    
+    
+    
     {
         "id": "concert-0-2025 BamBam HOMETOWN Concert in Bangkok",
         "artist": "2025",
@@ -560,6 +571,19 @@
         "url": "https://www.thaiticketmajor.com/concert/2025-bambam-hometown-concert-in-bangkok.html",
         "image_url": "https://www.thaiticketmajor.com/img_poster/prefix_1/0497/6497/2025-bambam-hometown-concert-in-bangkok-68e374b48dc5b-l.png",
         "booking_url": "https://www.thaiticketmajor.com",
+        "description": "N/A",
+        "price": "N/A"
+    },
+    
+    {
+        "id": "concert-47-2025 BIBI 1st WORLD TOUR [EVE] IN BANGKOK",
+        "artist": "BIBI",
+        "name": "2025 BIBI 1st WORLD TOUR [EVE] IN BANGKOK",
+        "venue": "ยูโอบี ไลฟ์, เอ็มสเฟียร์",
+        "date": "9 ส.ค. 2568",
+        "url": "https://www.thaiticketmajor.com/concert/2025-bibi-1st-world-toureve-in-bangkok.html",
+        "image_url": "https://www.thaiticketmajor.com/img_poster/prefix_1/0292/6292/2025-bibi-1st-world-toureve-in-bangkok-6800b6ce59b8e-l.png", 
+        "booking_url": "https://www.thaiticketmajor.com/concert/2025-bibi-1st-world-toureve-in-bangkok.html",
         "description": "N/A",
         "price": "N/A"
     }
