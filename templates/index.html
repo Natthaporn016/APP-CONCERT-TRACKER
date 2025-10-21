@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concert Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Main View Container -->
+        <div id="main-view">
+            <header>
+                <div class="header-content">
+                    <div>
+                        <h1>CONCERT TRACKER</h1>
+                        <p>อีเวนต์ล่าสุด</p>
+                    </div>
+                    <div id="auth-section" class="auth-container">
+                        <!-- Auth buttons are rendered here -->
+                    </div>
+                </div>
+                 <!-- Search Box -->
+                <div class="search-container">
+                    <!-- +++ ไอคอนที่เพิ่มเข้ามา +++ -->
+                    <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="search-box" placeholder="พิมพ์ชื่อศิลปินแล้วกด Enter เพื่อค้นหา...">
+                </div>
+            </header>
+
+            <section id="top-artists-section" class="hidden">
+                <h2>ศิลปินที่คุณฟังบ่อย</h2>
+                <div id="top-artists-list" class="artists-grid"></div>
+            </section>
+
+            <main id="concert-list" class="concert-grid">
+                <!-- Main concert list loads here -->
+            </main>
+        </div>
+
+        <!-- Artist Specific Concerts View (Initially Hidden) -->
+        <div id="artist-view" class="hidden">
+            <div class="view-header">
+                <button id="back-to-main-btn">&larr; กลับหน้าหลัก</button>
+                <h2 id="artist-concerts-title"></h2>
+            </div>
+            <div id="artist-concerts-grid" class="concert-grid"></div>
+        </div>
+    </div>
+
+    <!-- Notification Modal -->
+    <div id="notification-modal" class="modal-backdrop hidden">
+        <div class="modal-content"><p id="notification-message"></p></div>
+    </div>
+
+    <script>
+        // --- RENDER FUNCTIONS ---
+        function showNotification(message, isSuccess = true, duration = 3000) {
+            const modal = document.getElementById('notification-modal');
+            const messageEl = document.getElementById('notification-message');
+            const modalContent = modal.querySelector('.modal-content');
+            
+            messageEl.textContent = message;
+            modalContent.className = isSuccess ? 'modal-content success' : 'modal-content error';
+            modal.classList.remove('hidden');
+            
+            setTimeout(() => modal.classList.add('hidden'), duration);
+        }
+
+        function formatDate(isoString) {
+            if (!isoString) return 'Date not specified';
+            const date = new Date(isoString);
+            return date.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        function renderConcerts(concerts, containerId) {
+            const concertContainer = document.getElementById(containerId);
+            concertContainer.innerHTML = '';
+            if (!concerts || concerts.length === 0) {
+                concertContainer.innerHTML = `<p class="error-message">ไม่พบคอนเสิร์ต</p>`;
+                return;
+            }
+            concerts.forEach(concert => {
+                const card = document.createElement('div');
+                card.className = 'concert-card';
+                // Use single quotes for data-concert to handle potential double quotes in concert name
+                card.innerHTML = `
+                    <div class="card-content">
+                        <h2 class="card-title">${concert.name}</h2>
+                        <p class="card-artist">โดย ${concert.artist}</p>
+                        <p class="card-details">${concert.venue}</p>
+                        <p class="card-date">วันที่: ${formatDate(concert.date)}</p>
+                        <div class="card-actions">
+                            <button class="calendar-button" data-concert='${JSON.stringify(concert)}'>📅 เพิ่มลงปฏิทิน</button>
+                            <a href="${concert.url}" target="_blank" class="ticket-button">ดูรายละเอียด</a>
+                        </div>
+                    </div>`;
+                concertContainer.appendChild(card);
+            });
+        }
+
+        function renderTopArtists(artists) {
+            const artistsList = document.getElementById('top-artists-list');
+            document.getElementById('top-artists-section').classList.remove('hidden');
+            artistsList.innerHTML = '';
+            artists.forEach(artist => {
+                // This div is now a button to trigger the view change
+                artistsList.innerHTML += `
+                    <div class="artist-card-link" data-artist-name="${artist.name}" title="ดูคอนเสิร์ตของ ${artist.name}">
+                        <div class="artist-card">
+                            <img src="${artist.image_url}" alt="${artist.name}">
+                            <h3>${artist.name}</h3>
+                        </div>
+                    </div>`;
+            });
+        }
+        
+        function renderAuthButtons(status) {
+            const authSection = document.getElementById('auth-section');
+            let buttonsHTML = '';
+            // Spotify Button
+            if (status.spotify_logged_in) {
+                buttonsHTML += '<a href="/logout" class="auth-button spotify-button">ออกจากระบบ</a>';
+            } else {
+                buttonsHTML += '<a href="/login" class="auth-button spotify-button">เข้าสู่ระบบด้วย Spotify</a>';
+            }
+
+            // Google Button
+            if (status.google_logged_in) {
+                buttonsHTML += '<button class="auth-button google-button linked" disabled>✓ เชื่อมต่อกับ Google แล้ว</button>';
+            } else {
+                buttonsHTML += '<a href="/google-login" class="auth-button google-button">เชื่อมต่อกับ Google</a>';
+            }
+            authSection.innerHTML = buttonsHTML;
+        }
+
+        // --- VIEW MANAGEMENT ---
+        async function showArtistConcertsView(artistName) {
+            document.getElementById('main-view').classList.add('hidden');
+            const artistView = document.getElementById('artist-view');
+            artistView.classList.remove('hidden');
+
+            document.getElementById('artist-concerts-title').textContent = `คอนเสิร์ตของ ${artistName}`;
+            const grid = document.getElementById('artist-concerts-grid');
+            grid.innerHTML = '<p class="error-message">กำลังค้นหาคอนเสิร์ต...</p>';
+
+            try {
+                const response = await fetch(`/api/artist-concerts?artist=${encodeURIComponent(artistName)}`);
+                const concerts = await response.json();
+                renderConcerts(concerts, 'artist-concerts-grid');
+            } catch (error) {
+                grid.innerHTML = '<p class="error-message">เกิดข้อผิดพลาดในการค้นหา</p>';
+                console.error('Fetch artist concerts error:', error);
+            }
+        }
+
+        function showMainView() {
+            document.getElementById('artist-view').classList.add('hidden');
+            document.getElementById('main-view').classList.remove('hidden');
+        }
+
+        // --- FETCH & UPDATE LOGIC ---
+        async function initialLoad() {
+            try {
+                // Check auth status first
+                const authStatus = await fetch('/api/auth-status').then(res => res.json());
+                renderAuthButtons(authStatus);
+
+                // If logged in to spotify, fetch top artists
+                if (authStatus.spotify_logged_in) {
+                    const artists = await fetch('/api/spotify/top-artists').then(res => res.json());
+                    renderTopArtists(artists);
+                }
+
+                // Fetch the main list of concerts
+                const mainConcertList = document.getElementById('concert-list');
+                mainConcertList.innerHTML = '<p class="error-message">กำลังโหลดคอนเสิร์ตล่าสุด...</p>';
+                const concerts = await fetch('/api/concerts').then(res => res.json());
+                renderConcerts(concerts, 'concert-list');
+            } catch (e) {
+                console.error("Initial load failed:", e);
+                document.getElementById('concert-list').innerHTML = '<p class="error-message">ไม่สามารถโหลดข้อมูลได้</p>';
+            }
+        }
+
+        // --- EVENT LISTENERS ---
+        document.body.addEventListener('click', async function(event) {
+            const target = event.target;
+            const artistCard = target.closest('.artist-card-link');
+            const calendarButton = target.closest('.calendar-button');
+
+            // Handle clicking on an artist card
+            if (artistCard) {
+                const artistName = artistCard.dataset.artistName;
+                showArtistConcertsView(artistName);
+            }
+
+            // Handle clicking "Add to Calendar" button
+            if (calendarButton) {
+                try {
+                    const concertData = JSON.parse(calendarButton.dataset.concert);
+                    const response = await fetch('/api/add-to-calendar', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(concertData)
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        showNotification('เพิ่ม Event ลงใน Google Calendar สำเร็จ!');
+                    } else {
+                        // If needs login, redirect
+                        if(response.status === 401){
+                            showNotification('กรุณาเชื่อมต่อกับ Google Calendar ก่อน', false);
+                        } else {
+                            showNotification(`Error: ${result.error}`, false);
+                        }
+                    }
+                } catch(e) {
+                     showNotification('เกิดข้อผิดพลาด', false);
+                }
+            }
+        });
+
+        // Back button
+        document.getElementById('back-to-main-btn').addEventListener('click', showMainView);
+        
+        // Search box listener
+        const searchBox = document.getElementById('search-box');
+        searchBox.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                const artistName = searchBox.value.trim();
+                if (artistName) {
+                    showArtistConcertsView(artistName);
+                    searchBox.value = ''; // Clear search box after search
+                }
+            }
+        });
+        
+        // --- INITIAL LOAD ---
+        document.addEventListener('DOMContentLoaded', initialLoad);
+    </script>
+</body>
+</html>
+
