@@ -79,26 +79,52 @@
         function renderConcerts(concerts, containerId) {
             const concertContainer = document.getElementById(containerId);
             concertContainer.innerHTML = '';
-            if (!concerts || concerts.length === 0) {
-                concertContainer.innerHTML = `<p class="error-message">ไม่พบคอนเสิร์ต</p>`;
-                return;
-            }
-            concerts.forEach(concert => {
-                const card = document.createElement('div');
-                card.className = 'concert-card';
-                // Use single quotes for data-concert to handle potential double quotes in concert name
-                card.innerHTML = `
-                    <div class="card-content">
-                        <h2 class="card-title">${concert.name}</h2>
-                        <p class="card-artist">โดย ${concert.artist}</p>
-                        <p class="card-details">${concert.venue}</p>
-                        <p class="card-date">วันที่: ${formatDate(concert.date)}</p>
-                        <div class="card-actions">
-                            <a href="${concert.url}" target="_blank" class="ticket-button">ดูรายละเอียด</a>
-                        </div>
-                    </div>`;
-                concertContainer.appendChild(card);
-            });
+
+                        if (!concerts || concerts.length === 0) {
+
+                            concertContainer.innerHTML = `<p class="error-message">ไม่พบคอนเสิร์ตจาก ThaiTicketMajor หรือข้อมูลสำรอง</p>`;
+
+                            // Do NOT return here. Let the function continue, but the loop won't run.
+
+                        } else { // Only iterate and render cards if there are concerts
+
+                                                                                        concerts.forEach(concert => {
+
+                                                                                            const card = document.createElement('div');
+
+                                                                                            card.className = 'concert-card';
+
+                                                                                            // Use single quotes for data-concert to handle potential double quotes in concert name
+
+                                                                                            card.innerHTML = `
+
+                                                                                                <div class="card-content">
+
+                                                                                                    ${concert.image_url ? `<img src="${concert.image_url}" alt="${concert.name}" class="concert-image">` : ''}
+
+                                                                                                    <h2 class="card-title">${concert.name}</h2>
+
+                                                                                                    <p class="card-artist">โดย ${concert.artist}</p>
+
+                                                                                                    <p class="card-details">${concert.venue}</p>
+
+                                                                                                    <p class="card-date">วันที่: ${concert.date}</p>
+
+                                                                                                    <div class="card-actions">
+
+                                                                                                        ${concert.booking_url ? `<a href="${concert.booking_url}" target="_blank" class="ticket-button">ซื้อบัตร</a>` : ''}
+
+                                                                                                        <a href="${concert.url}" class="ticket-button">ดูรายละเอียด</a>
+
+                                                                                                    </div>
+
+                                                                                                </div>`;
+
+                                                                                            concertContainer.appendChild(card);
+
+                                                                                        });
+
+                        }
         }
 
         function renderTopArtists(artists) {
@@ -203,7 +229,7 @@
                 const artistName = searchBox.value.trim();
                 if (artistName) {
                     // Redirect to ThaiTicketMajor search page for the artist
-                    window.open(`https://www.thaiticketmajor.com/concert/?keyword=${encodeURIComponent(artistName)}`, '_blank');
+                    window.open(`https://www.thaiticketmajor.com/concert/?keyword=${encodeURIComponent(artistName)}`);
                     searchBox.value = ''; // Clear search box after search
                 }
             }
