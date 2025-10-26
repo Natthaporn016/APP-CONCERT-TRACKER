@@ -5,6 +5,8 @@ import requests
 from bs4 import BeautifulSoup
 from flask import Flask, session, request, redirect, render_template, jsonify, url_for
 from dotenv import load_dotenv
+from functools import wraps
+from flask import make_response
 import spotipy
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
@@ -16,6 +18,17 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "a_very_strong_secret_key_123")
 app.permanent_session_lifetime = datetime.timedelta(days=31)
+
+
+def nocache(view):
+    @wraps(view)
+    def no_cache_impl(*args, **kwargs):
+        response = make_response(view(*args, **kwargs))
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
+    return no_cache_impl
 
 # --- Helper Functions (Scraping) ---
 def scrape_thaiticketmajor(search_query=""):
@@ -61,7 +74,8 @@ def create_spotify_oauth():
         client_secret=os.getenv("SPOTIPY_CLIENT_SECRET", "").strip(),
         redirect_uri=os.getenv("SPOTIPY_REDIRECT_URI", "").strip(),
         scope="user-top-read",
-        show_dialog=True
+        show_dialog=True,
+        cache_path=None
     )
 
 SCOPES = ['https://www.googleapis.com/auth/calendar.events']
@@ -101,7 +115,8 @@ def callback():
         return redirect('/')
 
     # Proceed with normal token exchange if no error
-    session["spotify_token_info"] = create_spotify_oauth().get_access_token(request.args.get('code'))
+    # [ไฟล์ app.py บรรทัด 118] <-- นี่คือจุดแก้ไขที่ 1
+    session["spotify_token_info"] = create_spotify_oauth().get_access_token(request.args.get('code'), as_dict=True, check_cache=False)
     session.permanent = True
     return redirect('/')
 
@@ -124,6 +139,7 @@ def google_callback():
 
 # --- API Endpoints ---
 @app.route('/api/auth-status')
+@nocache
 def auth_status(): return jsonify({ 'spotify_logged_in': 'spotify_token_info' in session, 'google_logged_in': 'google_credentials' in session })
 
 @app.route('/api/concerts')
@@ -139,13 +155,15 @@ def get_concerts():
     return jsonify(concerts)
 
 @app.route('/api/spotify/top-artists')
+@nocache
 def get_top_artists():
     token_info = session.get("spotify_token_info")
     if not token_info: return jsonify({"error": "Not logged in"}), 401
     
     sp_oauth = create_spotify_oauth()
     if sp_oauth.is_token_expired(token_info):
-        token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
+        # <-- นี่คือจุดแก้ไขที่ 2
+        token_info = sp_oauth.refresh_access_token(token_info['refresh_token'], check_cache=False)
         session["spotify_token_info"] = token_info
 
     sp = spotipy.Spotify(auth=token_info['access_token'])
@@ -172,7 +190,7 @@ def add_to_calendar():
             event_time = datetime.datetime.now().replace(hour=12, minute=0, second=0, microsecond=0)
             description += f"\n\nหมายเหตุ: ไม่สามารถประมวลผลวันที่ '{date_str}' ได้ กรุณาตรวจสอบและแก้ไขวันที่ในปฏิทินของคุณ"
 
-        event = { 'summary': concert.get('name'), 'location': concert.get('venue'), 'description': description, 'start': {'dateTime': event_time.isoformat(), 'timeZone': 'Asia/Bangkok'}, 'end': {'dateTime': (event_time + datetime.timedelta(hours=2)).isoformat(), 'timeZone': 'Asia/Bangkok'}}
+        event = { 'summary': concert.get('name'), 'location': concert.get('venue'), 'description': description, 'start': {'dateTime': event_time.isoformat(), 'timeZone': 'Asia/Bangkok'}, 'end': {'dateTime': (event_time + datetime.timedelta(hours=2)).isoformat(), 'timeZone': 'Asia/BangKOK'}}
         created_event = service.events().insert(calendarId='primary', body=event).execute()
         return jsonify({'status': 'success', 'event_link': created_event.get('htmlLink')})
     except Exception as e:
@@ -202,4 +220,3 @@ def get_artist_concerts():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
