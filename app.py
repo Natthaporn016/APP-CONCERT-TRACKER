@@ -105,20 +105,77 @@ def login():
 @app.route('/logout')
 def logout(): session.clear(); return redirect('/')
 
+# --- Spotify Callback ---
 @app.route('/callback')
 def callback():
     if 'error' in request.args:
-        # User cancelled or an error occurred during authorization
-        if "spotify_token_info" in session:
-            session.pop("spotify_token_info", None)
-        # Redirect to homepage
+        session.pop("token_info", None)
         return redirect('/')
 
-    # Proceed with normal token exchange if no error
-    # [ไฟล์ app.py บรรทัด 118] <-- นี่คือจุดแก้ไขที่ 1
-    session["spotify_token_info"] = create_spotify_oauth().get_access_token(request.args.get('code'), as_dict=True, check_cache=False)
+    code = request.args.get('code')
+    sp_oauth = create_spotify_oauth()
+    token_info = sp_oauth.get_access_token(code)
+
+    # ✅ เก็บ token ใน session
+    session["token_info"] = {
+        "access_token": token_info.get("access_token"),
+        "refresh_token": token_info.get("refresh_token"),
+        "expires_at": token_info.get("expires_at"),
+        "scope": token_info.get("scope"),
+        "token_type": token_info.get("token_type")
+    }
     session.permanent = True
+    print("✅ Spotify Login Successful & Token Stored")
     return redirect('/')
+
+
+# --- Spotify Top Artists (with Auto Refresh) ---
+@app.route('/api/spotify/top-artists')
+@nocache
+def get_top_artists():
+    token_info = session.get("token_info")
+    if not token_info:
+        print("⚠️ No Spotify token found in session")
+        return jsonify({"error": "Not logged in"}), 401
+
+    sp_oauth = create_spotify_oauth()
+
+    try:
+        if sp_oauth.is_token_expired(token_info):
+            print("🔁 Spotify token expired — refreshing...")
+            refreshed_token = sp_oauth.refresh_access_token(token_info["refresh_token"])
+            token_info.update(refreshed_token)
+            session["token_info"] = token_info
+            print("✅ Spotify token refreshed successfully")
+    except Exception as e:
+        print(f"❌ Error refreshing token: {e}")
+        session.pop("token_info", None)
+        return jsonify({"error": "Spotify re-authentication failed, please login again."}), 401
+
+    # ✅ ดึงข้อมูลศิลปินที่ฟังบ่อย
+    try:
+        print("🎫 Access Token:", token_info.get("access_token"))
+        sp = spotipy.Spotify(auth=token_info["access_token"])
+        results = sp.current_user_top_artists(limit=5, time_range='short_term')
+        artists = [
+            {
+                "name": item["name"],
+                "image_url": item["images"][0]["url"] if item["images"] else "",
+                "spotify_url": item["external_urls"]["spotify"]
+            }
+            for item in results["items"]
+        ]
+        print("🎧 Successfully fetched top artists")
+        return jsonify(artists)
+
+    except spotipy.SpotifyException as e:
+        print(f"❌ Spotify API Error: {e}")
+        return jsonify({"error": f"Spotify API failed: {str(e)}"}), 500
+
+    except Exception as e:
+        print(f"❌ Unexpected error fetching artists: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
 
 @app.route('/google-login')
 def google_login():
@@ -154,22 +211,7 @@ def get_concerts():
             concerts = []
     return jsonify(concerts)
 
-@app.route('/api/spotify/top-artists')
-@nocache
-def get_top_artists():
-    token_info = session.get("spotify_token_info")
-    if not token_info: return jsonify({"error": "Not logged in"}), 401
-    
-    sp_oauth = create_spotify_oauth()
-    if sp_oauth.is_token_expired(token_info):
-        # <-- นี่คือจุดแก้ไขที่ 2
-        token_info = sp_oauth.refresh_access_token(token_info['refresh_token'], check_cache=False)
-        session["spotify_token_info"] = token_info
 
-    sp = spotipy.Spotify(auth=token_info['access_token'])
-    results = sp.current_user_top_artists(limit=5, time_range='short_term')
-    artists = [{'name': item['name'], 'image_url': item['images'][0]['url'] if item['images'] else '', 'spotify_url': item['external_urls']['spotify']} for item in results['items']]
-    return jsonify(artists)
 
 @app.route('/api/add-to-calendar', methods=['POST'])
 def add_to_calendar():
