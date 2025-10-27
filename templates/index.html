@@ -27,6 +27,8 @@
                 </div>
             </header>
 
+
+
             <section id="top-artists-section" class="hidden">
                 <h2>ศิลปินที่คุณฟังบ่อย</h2>
                 <div id="top-artists-list" class="artists-grid"></div>
@@ -129,12 +131,21 @@
             }
         }
 
+
+        
         function renderTopArtists(artists) {
             const artistsList = document.getElementById('top-artists-list');
-            document.getElementById('top-artists-section').classList.remove('hidden');
+            const topArtistsSection = document.getElementById('top-artists-section');
+
+            if (!artists || artists.length === 0) {
+                topArtistsSection.classList.remove('hidden');
+                artistsList.innerHTML = '<p>ไม่มีศิลปินคนโปรด</p>';
+                return;
+            }
+
+            topArtistsSection.classList.remove('hidden');
             artistsList.innerHTML = '';
             artists.forEach(artist => {
-                // This div is now a button to trigger the view change
                 artistsList.innerHTML += `
                     <div class="artist-card-link" data-artist-name="${artist.name}" title="ดูคอนเสิร์ตของ ${artist.name}">
                         <div class="artist-card">
@@ -144,7 +155,7 @@
                     </div>`;
             });
         }
-        
+
         function renderAuthButtons(status) {
             const authSection = document.getElementById('auth-section');
             let buttonsHTML = '';
@@ -242,6 +253,9 @@
                 if (authStatus.spotify_logged_in) {
                     const artists = await fetch('/api/spotify/top-artists').then(res => res.json());
                     renderTopArtists(artists);
+                } else {
+                    // If not logged in, clear the top artists
+                    renderTopArtists([]);
                 }
 
             } catch (e) {
@@ -305,7 +319,13 @@
         });
         
         // --- INITIAL LOAD ---
-        document.addEventListener('DOMContentLoaded', initialLoad);
+        window.addEventListener('pageshow', function(event) {
+            // Check if the page is loaded from cache (bfcache)
+            if (event.persisted) {
+                console.log('Page loaded from bfcache, re-running initialLoad');
+            }
+            initialLoad();
+        });
     </script>
 </body>
 </html>

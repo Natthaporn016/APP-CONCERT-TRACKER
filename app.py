@@ -1,6 +1,7 @@
 import os
 import json
 import datetime
+import time
 import requests
 from bs4 import BeautifulSoup
 from flask import Flask, session, request, redirect, render_template, jsonify, url_for
@@ -102,22 +103,27 @@ def login():
         session.pop("spotify_token_info", None)
     return redirect(create_spotify_oauth().get_authorize_url())
 
+import time
+
 @app.route('/logout')
-def logout(): session.clear(); return redirect('/')
+def logout(): 
+    session.clear()
+    # Add a cache-busting parameter to the redirect
+    return redirect(f'/?logout=true&_t={time.time()}')
 
 # --- Spotify Callback ---
 @app.route('/callback')
 def callback():
     if 'error' in request.args:
-        session.pop("token_info", None)
+        session.pop("spotify_token_info", None)
         return redirect('/')
 
     code = request.args.get('code')
     sp_oauth = create_spotify_oauth()
     token_info = sp_oauth.get_access_token(code)
 
-    # ✅ เก็บ token ใน session
-    session["token_info"] = {
+    # ✅ เก็บ token + refresh_token ไว้ใน session
+    session["spotify_token_info"] = {
         "access_token": token_info.get("access_token"),
         "refresh_token": token_info.get("refresh_token"),
         "expires_at": token_info.get("expires_at"),
@@ -133,29 +139,29 @@ def callback():
 @app.route('/api/spotify/top-artists')
 @nocache
 def get_top_artists():
-    token_info = session.get("token_info")
+    token_info = session.get("spotify_token_info")
     if not token_info:
         print("⚠️ No Spotify token found in session")
         return jsonify({"error": "Not logged in"}), 401
 
     sp_oauth = create_spotify_oauth()
 
+    # ✅ ตรวจสอบและต่ออายุ token อัตโนมัติ
     try:
         if sp_oauth.is_token_expired(token_info):
             print("🔁 Spotify token expired — refreshing...")
             refreshed_token = sp_oauth.refresh_access_token(token_info["refresh_token"])
             token_info.update(refreshed_token)
-            session["token_info"] = token_info
+            session["spotify_token_info"] = token_info
             print("✅ Spotify token refreshed successfully")
     except Exception as e:
         print(f"❌ Error refreshing token: {e}")
-        session.pop("token_info", None)
+        session.pop("spotify_token_info", None)
         return jsonify({"error": "Spotify re-authentication failed, please login again."}), 401
 
     # ✅ ดึงข้อมูลศิลปินที่ฟังบ่อย
     try:
-        print("🎫 Access Token:", token_info.get("access_token"))
-        sp = spotipy.Spotify(auth=token_info["access_token"])
+        sp = spotipy.Spotify(auth=token_info['access_token'])
         results = sp.current_user_top_artists(limit=5, time_range='short_term')
         artists = [
             {
@@ -175,6 +181,7 @@ def get_top_artists():
     except Exception as e:
         print(f"❌ Unexpected error fetching artists: {e}")
         return jsonify({"error": "Internal server error"}), 500
+
 
 
 @app.route('/google-login')
