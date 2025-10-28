@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Favorite Artist</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="add-artist-container">
+        <h1>เพิ่มศิลปินคนโปรด</h1>
+        <form action="/add_artist" method="post">
+            <input type="text" name="artist_name" placeholder="ชื่อศิลปิน" required class="artist-name-input">
+            <button type="submit" class="submit-artist-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                เพิ่มศิลปิน
+            </button>
+        </form>
+        <a href="/" class="back-link">กลับหน้าหลัก</a>
+    </div>
+</body>
+</html>

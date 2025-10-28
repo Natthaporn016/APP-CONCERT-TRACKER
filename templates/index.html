@@ -6,7 +6,7 @@
     <title>Concert Tracker</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -14,13 +14,15 @@
         <div id="main-view">
             <header>
                 <div class="header-content">
-                    <div>
+                    <div class="app-title">
                         <h1>CONCERT TRACKER</h1>
                         <p>By Thaiticketmajor.com</p>
                     </div>
-                    <div id="auth-section" class="auth-container">
-                        </div>
-                </div>
+                    
+                    <div class="auth-container"> 
+                        <a href="/add_artist" class="add-artist-btn">เพิ่มศิลปินคนโปรด</a>
+                        <div id="auth-section"></div> </div>
+                    </div>
                   <div class="search-container">
                     <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                     <input type="text" id="search-box" placeholder="พิมพ์ชื่อศิลปินแล้วกด Enter เพื่อค้นหา...">
@@ -29,9 +31,25 @@
 
 
 
-            <section id="top-artists-section" class="hidden">
-                <h2>ศิลปินที่คุณฟังบ่อย</h2>
-                <div id="top-artists-list" class="artists-grid"></div>
+            <section id="favorite-artists-section">
+                <div class="section-header">
+                    <h2>ศิลปินคนโปรดของฉัน</h2>
+                </div>
+                <div id="favorite-artists-list" class="artists-grid">
+                    {% if favorite_artists %}
+                        {% for artist in favorite_artists %}
+                            <div class="favorite-artist-card">
+                                <button class="delete-artist-btn" data-artist-name="{{ artist.name }}">&times;</button>
+                                <a href="#" class="artist-card-link" data-artist-name="{{ artist.name }}">
+                                    <img src="{{ artist.image_url }}" alt="{{ artist.name }}">
+                                </a>
+                                <span>{{ artist.name }}</span>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p>ยังไม่มีศิลปินคนโปรด</p>
+                    {% endif %}
+                </div>
             </section>
 
             <main id="concert-list" class="concert-grid">
@@ -76,9 +94,17 @@
             concertContainer.innerHTML = '';
 
             if (!concerts || concerts.length === 0) {
-                concertContainer.innerHTML = `<p class="error-message">ไม่พบคอนเสิร์ตจาก ThaiTicketMajor หรือข้อมูลสำรอง</p>`;
-                // Do NOT return here. Let the function continue, but the loop won't run.
-            } else { // Only iterate and render cards if there are concerts
+                if (containerId === 'artist-concerts-grid') {
+                    concertContainer.innerHTML = `<p class="error-message">ไม่พบคอนเสิร์ตของศิลปินนี้ใน thaiticketmajor</p>`;
+                } else {
+                    concertContainer.innerHTML = `<p class="error-message">ไม่พบคอนเสิร์ตจาก ThaiTicketMajor หรือข้อมูลสำรอง</p>`;
+                }
+            } else { 
+                if (concerts.length === 1) {
+                    concertContainer.classList.add('single-item');
+                } else {
+                    concertContainer.classList.remove('single-item');
+                }
                 concerts.forEach(concert => {
                     // --- LOGIC: กำหนด URL เฉพาะสำหรับศิลปิน (Dept & BIBI) ---
                     if (concert.artist && concert.artist.toLowerCase() === 'dept') {
@@ -116,12 +142,18 @@
                             <p class="card-date">วันที่: ${concert.date}</p>
 
                             <div class="card-actions">
+                            <a 
+                                href="${concert.booking_url && concert.booking_url.startsWith('http')
+                                        ? concert.booking_url
+                                        : `https://www.thaiticketmajor.com/concert/?keyword=${encodeURIComponent(concert.artist)}`}"
+                                target="_blank"
+                                class="ticket-button">
+                                ซื้อบัตร
+                                </a>
 
-                                ${concert.booking_url ? `<a href="${concert.booking_url}" target="_blank" class="ticket-button">ซื้อบัตร</a>` : ''}
 
-                                <button class="calendar-button" data-concert='${JSON.stringify(concert)}'>📅 เพิ่มลงปฏิทิน</button>
-                                <a href="${concert.url}" target="_blank" class="ticket-button">ดูรายละเอียด</a> </div>
-
+                                                                <button class="calendar-button" data-concert='${JSON.stringify(concert)}'>📅 เพิ่มลงปฏิทิน</button>
+                                                                <a href="${concert.url}" target="_blank" class="ticket-button">ดูรายละเอียด</a> </div>
                         </div>`;
 
                     concertContainer.appendChild(card);
@@ -133,39 +165,9 @@
 
 
         
-        function renderTopArtists(artists) {
-            const artistsList = document.getElementById('top-artists-list');
-            const topArtistsSection = document.getElementById('top-artists-section');
-
-            if (!artists || artists.length === 0) {
-                topArtistsSection.classList.remove('hidden');
-                artistsList.innerHTML = '<p>ไม่มีศิลปินคนโปรด</p>';
-                return;
-            }
-
-            topArtistsSection.classList.remove('hidden');
-            artistsList.innerHTML = '';
-            artists.forEach(artist => {
-                artistsList.innerHTML += `
-                    <div class="artist-card-link" data-artist-name="${artist.name}" title="ดูคอนเสิร์ตของ ${artist.name}">
-                        <div class="artist-card">
-                            <img src="${artist.image_url}" alt="${artist.name}">
-                            <h3>${artist.name}</h3>
-                        </div>
-                    </div>`;
-            });
-        }
-
         function renderAuthButtons(status) {
             const authSection = document.getElementById('auth-section');
             let buttonsHTML = '';
-            // Spotify Button
-            if (status.spotify_logged_in) {
-                buttonsHTML += '<a href="/logout" class="auth-button spotify-button">ออกจากระบบ</a>';
-            } else {
-                buttonsHTML += '<a href="/login" class="auth-button spotify-button">เข้าสู่ระบบด้วย Spotify</a>';
-            }
-
             // Google Button
             if (status.google_logged_in) {
                 buttonsHTML += '<button class="auth-button google-button linked" disabled>✓ เชื่อมต่อกับ Google แล้ว</button>';
@@ -222,8 +224,10 @@
                 // --- จบ LOGIC: กำหนดข้อมูลเฉพาะ ---
                 else {
                     try {
+                        console.log('Fetching concerts for artist:', artistName);
                         const response = await fetch(`/api/artist-concerts?artist=${encodeURIComponent(artistName)}`);
                         const concerts = await response.json();
+                        console.log('Received concerts:', concerts);
                         renderConcerts(concerts, 'artist-concerts-grid');
                     } catch (error) {
                         grid.innerHTML = '<p class="error-message">เกิดข้อผิดพลาดในการค้นหา</p>';
@@ -240,23 +244,19 @@
         async function initialLoad() {
             try {
                 // Check auth status first
+                console.log('Checking auth status...');
                 const authStatus = await fetch('/api/auth-status').then(res => res.json());
+                console.log('Auth status:', authStatus);
                 renderAuthButtons(authStatus);
 
                 // Fetch the main list of concerts first
                 const mainConcertList = document.getElementById('concert-list');
                 mainConcertList.innerHTML = '<p class="loading-message">กำลังโหลดคอนเสิร์ตล่าสุด...</p>'; // Clear previous content and show loading
+                console.log('Fetching concerts...');
                 const concerts = await fetch('/api/concerts').then(res => res.json());
+                console.log('Fetched concerts:', concerts);
                 renderConcerts(concerts, 'concert-list');
-
-                // If logged in to spotify, fetch top artists
-                if (authStatus.spotify_logged_in) {
-                    const artists = await fetch('/api/spotify/top-artists').then(res => res.json());
-                    renderTopArtists(artists);
-                } else {
-                    // If not logged in, clear the top artists
-                    renderTopArtists([]);
-                }
+                console.log('Concerts rendered.');
 
             } catch (e) {
                 console.error("Initial load failed:", e);
@@ -268,11 +268,34 @@
         document.body.addEventListener('click', async function(event) {
             const target = event.target;
             const artistCard = target.closest('.artist-card-link');
+            const deleteButton = target.closest('.delete-artist-btn');
 
             // Handle clicking on an artist card
             if (artistCard) {
+                event.preventDefault();
                 const artistName = artistCard.dataset.artistName;
                 showArtistConcertsView(artistName);
+            }
+
+            // Handle clicking delete artist button
+            if (deleteButton) {
+                event.preventDefault();
+                const artistName = deleteButton.dataset.artistName;
+                if (confirm(`ยืนยันการลบ ${artistName}?`)) {
+                    const response = await fetch('/api/artist/delete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: artistName })
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        showNotification(`ลบ ${artistName} เรียบร้อยแล้ว`);
+                        // Remove the card from the DOM
+                        deleteButton.closest('.favorite-artist-card').remove();
+                    } else {
+                        showNotification(`เกิดข้อผิดพลาด: ${result.error}`, false);
+                    }
+                }
             }
 
             // Handle clicking "Add to Calendar" button
@@ -319,11 +342,7 @@
         });
         
         // --- INITIAL LOAD ---
-        window.addEventListener('pageshow', function(event) {
-            // Check if the page is loaded from cache (bfcache)
-            if (event.persisted) {
-                console.log('Page loaded from bfcache, re-running initialLoad');
-            }
+        document.addEventListener('DOMContentLoaded', function() {
             initialLoad();
         });
     </script>
