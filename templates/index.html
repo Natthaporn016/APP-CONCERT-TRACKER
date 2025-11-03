@@ -342,17 +342,17 @@
         });
         
         // --- INITIAL LOAD ---
-<<<<<<< HEAD
+
+            
         document.addEventListener('DOMContentLoaded', function() {
-=======
-        window.addEventListener('pageshow', function(event) {
-            // Check if the page is loaded from cache (bfcache)
-            if (event.persisted) {
-                console.log('Page loaded from bfcache, re-running initialLoad');
-            }
->>>>>>> e407f12 (feat: update top artists API logs)
-            initialLoad();
+            window.addEventListener('pageshow', function(event) {
+                // Check if the page is loaded from cache (bfcache)
+                if (event.persisted) {
+                    console.log('Page loaded from bfcache, re-running initialLoad');
+                }
+                initialLoad();
+            });
         });
-    </script>
+</script>
 </body>
 </html>
