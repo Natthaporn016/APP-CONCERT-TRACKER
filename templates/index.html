@@ -342,6 +342,7 @@
         });
         
         // --- INITIAL LOAD ---
+<<<<<<< HEAD
 
             
         document.addEventListener('DOMContentLoaded', function() {
@@ -354,5 +355,15 @@
             });
         });
 </script>
+=======
+        window.addEventListener('pageshow', function(event) {
+            // Check if the page is loaded from cache (bfcache)
+            if (event.persisted) {
+                console.log('Page loaded from bfcache, re-running initialLoad');
+            }
+            initialLoad();
+        });
+    </script>
+>>>>>>> ce87156 (Fix line ending warninga and up date files)
 </body>
 </html>
